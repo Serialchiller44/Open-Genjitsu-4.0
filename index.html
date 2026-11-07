@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#0a0a0a" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Genjitsu" />
+<title>Open Genjitsu 4.0</title>
+<style>
+  :root { --neon:#b8ff01; --bg:#0a0a0a; --card:#141414; --border:#282828; --muted:#9a9a9a; --err:#ff5c5c; }
+  * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  html { background:var(--bg); }
+  body { background:var(--bg); color:#f5f5f5; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+         max-width:480px; margin:0 auto; padding:calc(16px + env(safe-area-inset-top)) 14px calc(48px + env(safe-area-inset-bottom)); }
+  .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; gap:10px; }
+  .title { font-size:19px; font-weight:900; letter-spacing:-.5px; display:flex; align-items:center; gap:8px; }
+  .dot { width:11px; height:11px; border-radius:50%; background:var(--neon); box-shadow:0 0 10px var(--neon); }
+  .sub { font-size:11px; color:var(--muted); margin-top:2px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:15px; margin-bottom:14px; }
+  .step-title { font-size:11px; font-weight:900; text-transform:uppercase; color:var(--neon); letter-spacing:.6px; margin-bottom:10px;
+                display:flex; justify-content:space-between; gap:8px; }
+  .step-title .badge { color:#888; font-weight:600; text-transform:none; letter-spacing:0; }
+  .row { display:flex; gap:8px; align-items:center; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  input[type=text], input[type=password], input[type=url], select {
+    width:100%; padding:11px 12px; font-size:16px; /* 16px stops iOS zoom-on-focus */
+    border-radius:10px; background:#000; border:1px solid #3a3a3a; color:#fff; outline:none; }
+  select { font-size:14px; }
+  input:focus, select:focus { border-color:var(--neon); }
+  button, .btn { cursor:pointer; border:none; border-radius:11px; font-weight:800; font-size:13px; padding:11px 14px;
+                 text-align:center; display:inline-block; text-decoration:none; font-family:inherit; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .btn-neon { background:var(--neon); color:#000; }
+  .btn-dark { background:#222; color:#eee; border:1px solid #3a3a3a; }
+  .btn-full { width:100%; padding:16px; font-size:15px; font-weight:900; border-radius:14px; }
+  .nowrap { white-space:nowrap; }
+  .upload-box { border:1px dashed #444; background:#080808; border-radius:12px; padding:12px; text-align:center; cursor:pointer;
+                display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:110px; }
+  .upload-box.wide { min-height:64px; flex-direction:row; gap:10px; }
+  .upload-box:active { border-color:var(--neon); }
+  .preview-img { width:72px; height:72px; object-fit:cover; border-radius:8px; margin-top:8px; border:1px solid #444; }
+  .hidden { display:none !important; }
+  .prog-bg { width:100%; height:8px; background:#222; border-radius:99px; overflow:hidden; margin:8px 0 4px; }
+  .prog-bar { height:100%; background:var(--neon); width:0%; transition:width .2s; }
+  video { width:100%; max-height:300px; border-radius:12px; background:#000; border:1px solid #333; margin-top:10px; display:block; }
+  pre { background:#000; padding:8px; border-radius:8px; font-size:11px; color:#bbb; overflow:auto; max-height:220px;
+        border:1px solid #222; margin-top:10px; white-space:pre-wrap; word-break:break-word; }
+  label.lbl { font-size:11px; color:#aaa; display:block; margin-bottom:5px; font-weight:600; }
+  .hint { font-size:11px; color:var(--muted); line-height:1.45; margin-top:6px; }
+  .hint b { color:#ddd; }
+  .status { font-size:12px; color:#ccc; text-align:center; word-break:break-word; }
+  .err { color:var(--err) !important; }
+  .warn { color:#ffcc66; }
+  .divider { border-top:1px solid #222; margin:12px 0; }
+  input[type=range] { width:100%; accent-color:var(--neon); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="title"><span class="dot"></span> OPEN GENJITSU 4.0</div>
+    <div class="sub">HLS → MP4 stitcher + free Wan 2.2 Animate (ZeroGPU)</div>
+  </div>
+  <button id="toggleSettingsBtn" class="btn-dark nowrap">⚙️ Settings</button>
+</div>
+
+<!-- Settings -->
+<div id="settingsPanel" class="card hidden">
+  <div class="step-title"><span>Settings</span></div>
+  <label class="lbl">Hugging Face token (hf_…) — gives you your account's free daily GPU minutes</label>
+  <input id="hfTokenInput" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="hf_xxxxxxxxxxxxxxxxxxxx" />
+  <div class="hint">Create one at huggingface.co → Settings → Access Tokens → <b>Read</b>. Stored only in this browser.</div>
+  <div class="divider"></div>
+  <label class="lbl">ZeroGPU Space ID</label>
+  <div class="row">
+    <input id="spaceIdInput" type="text" autocapitalize="off" spellcheck="false" />
+    <button id="inspectApiBtn" class="btn-dark nowrap">Test</button>
+  </div>
+  <div class="hint">Default: <b>alexnasa/Wan2.2-Animate-ZEROGPU</b>. “Test” connects and lists the Space's API inputs.</div>
+  <button id="saveSettingsBtn" class="btn-neon" style="width:100%;margin-top:12px;">SAVE</button>
+  <pre id="apiDebugBox" class="hidden"></pre>
+</div>
+
+<!-- Step 1 -->
+<div class="card">
+  <div class="step-title"><span>1. Driving video</span><span id="videoStatusBadge" class="badge">None loaded</span></div>
+
+  <label class="upload-box wide" for="videoFileInput">
+    <span style="font-size:22px;">🎬</span>
+    <span style="text-align:left;">
+      <span style="font-size:13px;font-weight:800;display:block;">Pick an MP4 from your phone</span>
+      <span class="hint" style="margin:0;">Most reliable option</span>
+    </span>
+  </label>
+  <input id="videoFileInput" type="file" accept="video/*" class="hidden" />
+
+  <div class="divider"></div>
+  <label class="lbl">…or paste an .m3u8 link and stitch it here</label>
+  <input id="m3u8UrlInput" type="url" autocapitalize="off" spellcheck="false" placeholder="https://…/master.m3u8" />
+  <div class="row" style="margin-top:8px;">
+    <select id="qualitySelect" style="flex:1;">
+      <option value="720">Up to 720p</option>
+      <option value="best">Best available</option>
+      <option value="480">Up to 480p</option>
+    </select>
+    <button id="fetchM3u8Btn" class="btn-neon nowrap">Fetch &amp; Stitch</button>
+  </div>
+  <div id="m3u8ProgressWrap" class="hidden">
+    <div class="prog-bg"><div id="m3u8ProgressBar" class="prog-bar"></div></div>
+    <div id="m3u8StatusText" class="status"></div>
+  </div>
+
+  <div id="drivingPreviewWrap" class="hidden">
+    <video id="drivingVideoPreview" controls playsinline muted></video>
+    <div class="grid2" style="margin-top:8px;">
+      <button id="saveRefBtn" class="btn-dark">⬇️ Save MP4</button>
+      <button id="shareRefBtn" class="btn-dark">📤 Share / Photos</button>
+    </div>
+  </div>
+</div>
+
+<!-- Step 2 -->
+<div class="card">
+  <div class="step-title"><span>2. Character photo(s)</span></div>
+  <div class="grid2">
+    <label class="upload-box" for="char1Input">
+      <span style="font-size:12px;font-weight:800;">Character 1</span>
+      <span id="char1Label" class="hint" style="margin-top:3px;">Tap to choose</span>
+      <img id="char1Preview" class="preview-img hidden" alt="" />
+    </label>
+    <label class="upload-box" for="char2Input">
+      <span style="font-size:12px;font-weight:800;color:#bbb;">Character 2 <span style="font-weight:600;">(optional)</span></span>
+      <span id="char2Label" class="hint" style="margin-top:3px;">Runs a 2nd pass</span>
+      <img id="char2Preview" class="preview-img hidden" alt="" />
+    </label>
+  </div>
+  <input id="char1Input" type="file" accept="image/*" class="hidden" />
+  <input id="char2Input" type="file" accept="image/*" class="hidden" />
+  <button id="clearChar2Btn" class="btn-dark hidden" style="width:100%;margin-top:8px;">✕ Remove Character 2</button>
+  <div class="hint">Clear, front-facing, well-lit photo works best. The Space automatically picks the most prominent person in the video.</div>
+</div>
+
+<!-- Step 3 -->
+<div class="card">
+  <div class="step-title"><span>3. Settings for this run</span></div>
+  <div class="grid2" style="margin-bottom:12px;">
+    <div>
+      <label class="lbl">Mode</label>
+      <select id="modeSelect">
+        <option value="Character Swap">Character Swap</option>
+        <option value="Pose Retarget">Pose Retarget</option>
+      </select>
+    </div>
+    <div>
+      <label class="lbl">Resolution</label>
+      <select id="resSelect">
+        <option value="Low Res">Low Res (cheaper)</option>
+        <option value="Medium Res">Medium Res</option>
+      </select>
+    </div>
+  </div>
+  <div class="row" style="justify-content:space-between;margin-bottom:4px;">
+    <span style="font-size:11px;color:#aaa;">Max duration</span>
+    <span id="durValueLabel" style="font-size:13px;font-weight:900;color:var(--neon);">3s</span>
+  </div>
+  <input id="durationSlider" type="range" min="2" max="20" step="1" value="3" />
+  <div id="gpuEstimate" class="hint"></div>
+</div>
+
+<button id="runSwapBtn" class="btn-neon btn-full">⚡ RUN SWAP (free ZeroGPU)</button>
+
+<!-- Output -->
+<div id="jobStatusCard" class="card hidden" style="margin-top:14px;">
+  <div class="row" style="justify-content:space-between;margin-bottom:6px;">
+    <span id="jobTitle" style="font-size:12px;font-weight:800;color:var(--neon);">Connecting…</span>
+    <span id="jobTimer" style="font-size:11px;color:#888;">0s</span>
+  </div>
+  <div class="prog-bg"><div id="jobProgressBar" class="prog-bar"></div></div>
+  <div id="jobLog" style="font-size:12px;color:#ccc;word-break:break-word;line-height:1.45;"></div>
+  <div id="outputVideoWrap" class="hidden" style="margin-top:10px;padding-top:10px;border-top:1px solid #282828;">
+    <video id="outputVideo" controls playsinline loop style="border-color:var(--neon);"></video>
+    <div class="grid2" style="margin-top:8px;">
+      <button id="saveOutBtn" class="btn-neon">⬇️ Save MP4</button>
+      <button id="shareOutBtn" class="btn-dark">📤 Share / Photos</button>
+    </div>
+    <a id="openOutLink" class="hint" style="display:block;text-align:center;margin-top:8px;color:#aaa;" target="_blank" rel="noopener">Open result in a new tab</a>
+  </div>
+</div>
+
+<script type="module">
+// ---------- config ----------
+const GRADIO_CLIENT_URL = 'https://cdn.jsdelivr.net/npm/@gradio/client@2.7.2/dist/index.min.js';
+const MUXJS_URL = 'https://cdn.jsdelivr.net/npm/mux.js@6.3.0/dist/mux.min.js';
+const DEFAULT_SPACE = 'alexnasa/Wan2.2-Animate-ZEROGPU';
+
+// ---------- small helpers ----------
+const $ = (id) => document.getElementById(id);
+const mb = (n) => (n / 1048576).toFixed(1) + ' MB';
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+
+let drivingFile = null;
+let char1File = null;
+let char2File = null;
+let lastOutputBlob = null;
+let busy = false;
+
+let sdkPromise = null;
+function loadSdk() {
+  if (!sdkPromise) {
+    sdkPromise = import(GRADIO_CLIENT_URL).catch((e) => {
+      sdkPromise = null;
+      throw new Error('Could not load the Gradio client from the CDN (' + e.message + ').');
+    });
+  }
+  return sdkPromise;
+}
+
+let muxPromise = null;
+function loadMux() {
+  if (window.muxjs) return Promise.resolve(window.muxjs);
+  if (!muxPromise) {
+    muxPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = MUXJS_URL;
+      s.onload = () => (window.muxjs ? resolve(window.muxjs) : reject(new Error('mux.js loaded but is unavailable.')));
+      s.onerror = () => { muxPromise = null; reject(new Error('Could not load mux.js from the CDN.')); };
+      document.head.appendChild(s);
+    });
+  }
+  return muxPromise;
+}
+
+function saveBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.rel = 'noopener';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
+async function shareOrSave(blob, name) {
+  const file = new File([blob], name, { type: blob.type || 'video/mp4' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: name }); }
+    catch (e) { if (e.name !== 'AbortError') saveBlob(blob, name); }
+  } else {
+    saveBlob(blob, name);
+  }
+}
+
+// ---------- settings ----------
+const hfTokenInput = $('hfTokenInput');
+const spaceIdInput = $('spaceIdInput');
+hfTokenInput.value = store.get('hf_token', '');
+spaceIdInput.value = store.get('space_id', DEFAULT_SPACE);
+
+$('toggleSettingsBtn').onclick = () => $('settingsPanel').classList.toggle('hidden');
+$('saveSettingsBtn').onclick = () => {
+  store.set('hf_token', hfTokenInput.value.trim());
+  store.set('space_id', spaceIdInput.value.trim() || DEFAULT_SPACE);
+  if (!spaceIdInput.value.trim()) spaceIdInput.value = DEFAULT_SPACE;
+  $('settingsPanel').classList.add('hidden');
+};
+if (!hfTokenInput.value) $('settingsPanel').classList.remove('hidden');
+
+function getToken() {
+  const t = hfTokenInput.value.trim();
+  return t.startsWith('hf_') ? t : undefined;
+}
+function getSpace() { return spaceIdInput.value.trim() || DEFAULT_SPACE; }
+
+async function connectClient(onStatus) {
+  const sdk = await loadSdk();
+  const opts = {};
+  const token = getToken();
+  if (token) opts.token = token;
+  if (onStatus) opts.status_callback = onStatus;
+  const client = await sdk.Client.connect(getSpace(), opts);
+  return { sdk, client };
+}
+
+$('inspectApiBtn').onclick = async () => {
+  const box = $('apiDebugBox');
+  box.classList.remove('hidden', 'err');
+  box.textContent = 'Connecting to ' + getSpace() + '…';
+  try {
+    const { client } = await connectClient((s) => { box.textContent = 'Space status: ' + (s.status || '') + ' ' + (s.message || ''); });
+    const api = await client.view_api();
+    const eps = api.named_endpoints || {};
+    const chosen = pickEndpoint(api);
+    const lines = ['Connected ✔' + (getToken() ? ' (with your token)' : ' (no token — guest quota only)'), ''];
+    for (const [name, ep] of Object.entries(eps)) {
+      lines.push((name === chosen ? '★ ' : '  ') + name);
+      for (const p of ep.parameters || []) {
+        lines.push('     • ' + (p.parameter_name || p.label) + ' [' + (p.component || '?') + ']' +
+          (p.parameter_has_default ? ' = ' + JSON.stringify(p.parameter_default) : ''));
+      }
+    }
+    lines.push('', '★ = endpoint this app will call');
+    box.textContent = lines.join('\n');
+  } catch (e) {
+    box.classList.add('err');
+    box.textContent = 'Error: ' + (e.message || e);
+  }
+};
+
+// ---------- step 1: local file ----------
+function setDriving(file, label) {
+  drivingFile = file;
+  const v = $('drivingVideoPreview');
+  if (v.dataset.url) URL.revokeObjectURL(v.dataset.url);
+  v.dataset.url = URL.createObjectURL(file);
+  v.src = v.dataset.url;
+  $('drivingPreviewWrap').classList.remove('hidden');
+  $('videoStatusBadge').textContent = label + ' · ' + mb(file.size);
+}
+
+$('videoFileInput').onchange = (e) => {
+  const f = e.target.files && e.target.files[0];
+  if (f) setDriving(f, 'Loaded');
+};
+$('saveRefBtn').onclick = () => drivingFile && saveBlob(drivingFile, 'reference_video.mp4');
+$('shareRefBtn').onclick = () => drivingFile && shareOrSave(drivingFile, 'reference_video.mp4');
+
+// ---------- step 1: HLS stitcher ----------
+function parseAttrs(s) {
+  const out = {};
+  const re = /([A-Z0-9-]+)=("[^"]*"|[^,]*)/g;
+  let m;
+  while ((m = re.exec(s))) out[m[1]] = m[2].replace(/^"|"$/g, '');
+  return out;
+}
+const afterColon = (line) => line.slice(line.indexOf(':') + 1);
+
+function pickVariant(text, baseUrl, pref) {
+  const lines = text.split(/\r?\n/).map((l) => l.trim());
+  const variants = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (!lines[i].startsWith('#EXT-X-STREAM-INF')) continue;
+    const a = parseAttrs(afterColon(lines[i]));
+    let j = i + 1;
+    while (j < lines.length && (!lines[j] || lines[j].startsWith('#'))) j++;
+    if (j >= lines.length) continue;
+    const h = a.RESOLUTION ? parseInt(a.RESOLUTION.split('x')[1], 10) || 0 : 0;
+    variants.push({ url: new URL(lines[j], baseUrl).href, bw: Number(a.BANDWIDTH) || 0, h, res: a.RESOLUTION || 'unknown' });
+  }
+  if (!variants.length) return null;
+  variants.sort((x, y) => (x.h - y.h) || (x.bw - y.bw));
+  let chosen = variants[variants.length - 1];
+  if (pref !== 'best') {
+    const ok = variants.filter((v) => v.h && v.h <= Number(pref));
+    if (ok.length) chosen = ok[ok.length - 1];
+  }
+  return chosen;
+}
+
+function parseMediaPlaylist(text, baseUrl) {
+  const segs = [];
+  let init = null;
+  let encrypted = false;
+  for (const raw of text.split(/\r?\n/)) {
+    const l = raw.trim();
+    if (!l) continue;
+    if (l.startsWith('#EXT-X-KEY')) {
+      const a = parseAttrs(afterColon(l));
+      if (a.METHOD && a.METHOD !== 'NONE') encrypted = true;
+    } else if (l.startsWith('#EXT-X-MAP')) {
+      const a = parseAttrs(afterColon(l));
+      if (a.URI) init = new URL(a.URI, baseUrl).href;
+    } else if (!l.startsWith('#')) {
+      segs.push(new URL(l, baseUrl).href);
+    }
+  }
+  return { segs, init, encrypted };
+}
+
+function networkHint(e) {
+  if (e instanceof TypeError) {
+    return new Error('The video server refused the request from this page (CORS) or the link has expired. ' +
+      'Download the MP4 another way instead, then use “Pick an MP4 from your phone”.');
+  }
+  return e;
+}
+
+async function fetchText(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('HTTP ' + r.status + ' loading playlist (link may have expired).');
+  return r.text();
+}
+
+async function fetchBytes(url, fallbackQuery) {
+  let r = await fetch(url);
+  if (!r.ok && fallbackQuery && !new URL(url).search) r = await fetch(url + fallbackQuery);
+  if (!r.ok) throw new Error('HTTP ' + r.status + ' downloading a segment.');
+  return new Uint8Array(await r.arrayBuffer());
+}
+
+async function downloadAll(urls, query, onProgress) {
+  const out = new Array(urls.length);
+  let next = 0, done = 0;
+  async function worker() {
+    while (next < urls.length) {
+      const i = next++;
+      out[i] = await fetchBytes(urls[i], query);
+      onProgress(++done, urls.length);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(4, urls.length) }, worker));
+  return out;
+}
+
+// <transmux>
+// Converts an ordered list of MPEG-TS segments into fragmented-MP4 parts:
+// one init segment (ftyp+moov) followed by one moof+mdat per TS segment.
+function transmuxTsToMp4(muxjs, tsSegments) {
+  return new Promise((resolve, reject) => {
+    const parts = [];
+    let haveInit = false;
+    const transmuxer = new muxjs.mp4.Transmuxer();
+    transmuxer.on('data', (seg) => {
+      if (!haveInit) { parts.push(new Uint8Array(seg.initSegment)); haveInit = true; }
+      parts.push(new Uint8Array(seg.data));
+    });
+    try {
+      for (const ts of tsSegments) { transmuxer.push(ts); transmuxer.flush(); }
+    } catch (e) { reject(e); return; }
+    if (!haveInit) { reject(new Error('Could not decode these segments (not MPEG-TS video).')); return; }
+    resolve(parts);
+  });
+}
+// </transmux>
+
+function setStitchProgress(pct, text, isErr) {
+  $('m3u8ProgressBar').style.width = pct + '%';
+  const st = $('m3u8StatusText');
+  st.textContent = text;
+  st.classList.toggle('err', !!isErr);
+}
+
+async function stitchHls(rawUrl) {
+  setStitchProgress(3, 'Fetching playlist…');
+  const query = new URL(rawUrl).search;
+  let playlistUrl = rawUrl;
+  let text;
+  try { text = await fetchText(playlistUrl); } catch (e) { throw networkHint(e); }
+  if (!text.includes('#EXTM3U')) throw new Error('That link is not an HLS playlist (.m3u8).');
+
+  if (text.includes('#EXT-X-STREAM-INF')) {
+    const v = pickVariant(text, playlistUrl, $('qualitySelect').value);
+    if (!v) throw new Error('No video streams listed in the master playlist.');
+    playlistUrl = v.url;
+    setStitchProgress(6, 'Using ' + v.res + ' stream…');
+    try { text = await fetchText(playlistUrl); } catch (e) { throw networkHint(e); }
+  }
+
+  const { segs, init, encrypted } = parseMediaPlaylist(text, playlistUrl);
+  if (encrypted) throw new Error('This stream is encrypted, so it can’t be stitched in the browser.');
+  if (!segs.length) throw new Error('No video segments found in the playlist.');
+
+  let bytes;
+  try {
+    bytes = await downloadAll(segs, query, (d, n) =>
+      setStitchProgress(6 + Math.round((d / n) * 84), 'Downloading segment ' + d + ' of ' + n + '…'));
+  } catch (e) { throw networkHint(e); }
+
+  let parts;
+  if (init) {
+    // Already fragmented MP4 (CMAF): init + segments is a valid MP4 as-is.
+    parts = [await fetchBytes(init, query), ...bytes];
+  } else {
+    setStitchProgress(93, 'Converting to MP4…');
+    const muxjs = await loadMux();
+    parts = await transmuxTsToMp4(muxjs, bytes);
+  }
+  const file = new File(parts, 'reference_video.mp4', { type: 'video/mp4' });
+  setDriving(file, 'Stitched');
+  setStitchProgress(100, 'Done — ' + mb(file.size) + ' MP4 ready.');
+}
+
+$('fetchM3u8Btn').onclick = async () => {
+  const url = $('m3u8UrlInput').value.trim();
+  $('m3u8ProgressWrap').classList.remove('hidden');
+  if (!/^https?:\/\//i.test(url)) { setStitchProgress(0, 'Paste a full https://…m3u8 link first.', true); return; }
+  const btn = $('fetchM3u8Btn');
+  btn.disabled = true;
+  try { await stitchHls(url); }
+  catch (e) { setStitchProgress(0, 'Error: ' + (e.message || e), true); }
+  finally { btn.disabled = false; }
+};
+
+// ---------- step 2: photos ----------
+// Shrinks big phone photos (12–48 MP) to ≤1536px JPEG so uploads are fast.
+function shrinkImage(file, maxSide = 1536) {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+      if (scale === 1 && /jpe?g|png|webp/i.test(file.type)) { URL.revokeObjectURL(url); resolve(file); return; }
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.naturalWidth * scale);
+      c.height = Math.round(img.naturalHeight * scale);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      c.toBlob((b) => resolve(b ? new File([b], 'character.jpg', { type: 'image/jpeg' }) : file), 'image/jpeg', 0.92);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
+function wirePhoto(n) {
+  $('char' + n + 'Input').onchange = async (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const small = await shrinkImage(f);
+    if (n === 1) char1File = small; else char2File = small;
+    const img = $('char' + n + 'Preview');
+    img.src = URL.createObjectURL(small);
+    img.classList.remove('hidden');
+    $('char' + n + 'Label').textContent = f.name;
+    if (n === 2) $('clearChar2Btn').classList.remove('hidden');
+    updateEstimate();
+  };
+}
+wirePhoto(1);
+wirePhoto(2);
+$('clearChar2Btn').onclick = () => {
+  char2File = null;
+  $('char2Input').value = '';
+  $('char2Preview').classList.add('hidden');
+  $('char2Label').textContent = 'Runs a 2nd pass';
+  $('clearChar2Btn').classList.add('hidden');
+  updateEstimate();
+};
+
+// ---------- step 3: GPU estimate ----------
+// Mirrors the Space's own time table (2s≈110s, 3–5s≈150s, 10s≈270s, 20s≈500s; Low Res = half).
+function gpuSeconds(dur, res) {
+  const pts = [[2, 110], [3, 150], [5, 150], [10, 270], [20, 500]];
+  let s = pts[pts.length - 1][1];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [x0, y0] = pts[i], [x1, y1] = pts[i + 1];
+    if (dur >= x0 && dur <= x1) { s = y0 + (y1 - y0) * (dur - x0) / (x1 - x0); break; }
+  }
+  return Math.round(s * (res === 'Medium Res' ? 1 : 0.5));
+}
+function updateEstimate() {
+  const dur = Number($('durationSlider').value);
+  $('durValueLabel').textContent = dur + 's';
+  const passes = char2File ? 2 : 1;
+  const secs = gpuSeconds(dur, $('resSelect').value) * passes;
+  const el = $('gpuEstimate');
+  el.innerHTML = 'Estimated GPU time: <b>~' + secs + 's</b>' + (passes === 2 ? ' (2 passes)' : '') + '. ' +
+    (secs > 180
+      ? '<span class="warn">Likely more than a free account’s daily allowance — try Low Res or a shorter clip.</span>'
+      : 'Free accounts get a few GPU-minutes per day.');
+}
+$('durationSlider').oninput = updateEstimate;
+$('resSelect').onchange = updateEstimate;
+updateEstimate();
+
+// ---------- Gradio API mapping ----------
+function pickEndpoint(api) {
+  const names = Object.keys((api && api.named_endpoints) || {});
+  return names.find((n) => n === '/animate_scene') ||
+    names.find((n) => /animate|generate|predict|infer|run/i.test(n)) ||
+    names[0] || '/animate_scene';
+}
+
+function buildPayload(sdk, params, inp) {
+  const videoValue = (p) => {
+    const t = JSON.stringify((p && (p.python_type || p.type)) || '');
+    const wrap = !p || /video\s*[:"]/i.test(t) || !/filepath|FileData/i.test(t);
+    return wrap ? { video: sdk.handle_file(inp.video) } : sdk.handle_file(inp.video);
+  };
+  if (!params || !params.length) {
+    // Known signature of alexnasa/Wan2.2-Animate-ZEROGPU → animate_scene(...)
+    return [videoValue(null), inp.duration, sdk.handle_file(inp.image), inp.mode, inp.res];
+  }
+  return params.map((p) => {
+    const name = ((p.parameter_name || '') + ' ' + (p.label || '')).toLowerCase();
+    const comp = (p.component || '').toLowerCase();
+    const types = JSON.stringify(p.python_type || '') + JSON.stringify(p.type || '');
+    if (comp === 'video' || /video/.test(name)) return videoValue(p);
+    if (comp === 'image' || /image|frame|ref|photo/.test(name)) return sdk.handle_file(inp.image);
+    if (/character swap|pose retarget/i.test(types) || /rc_str|replace|mode/.test(name)) return inp.mode;
+    if (/low res|medium res/i.test(types) || /resolution/.test(name)) return inp.res;
+    if (comp === 'slider' || comp === 'number' || /duration|second/.test(name)) return inp.duration;
+    return p.parameter_has_default ? p.parameter_default : null;
+  });
+}
+
+function extractVideoUrl(data) {
+  const first = Array.isArray(data) ? data[0] : data;
+  if (!first) return null;
+  if (typeof first === 'string') return first;
+  return (first.video && (first.video.url || first.video.path)) || first.url || null;
+}
+
+function friendlyError(msg) {
+  const m = String(msg || 'Unknown error');
+  if (/quota/i.test(m)) return m + ' → Lower the resolution/duration, add your token in ⚙️ Settings, or wait for your daily quota to reset.';
+  if (/sleep|paused|building|runtime error/i.test(m)) return m + ' → The Space is not running right now. Try again later or set another Space ID.';
+  return m;
+}
+
+// ---------- run ----------
+const jobLog = (t, isErr) => { const el = $('jobLog'); el.textContent = t; el.classList.toggle('err', !!isErr); };
+const jobProgress = (pct) => { $('jobProgressBar').style.width = Math.max(0, Math.min(100, pct)) + '%'; };
+
+async function runPass(sdk, client, endpoint, params, videoInput, imageFile, label) {
+  $('jobTitle').textContent = label;
+  jobLog('Uploading video and photo…');
+  jobProgress(3);
+  const inp = {
+    video: videoInput,
+    image: imageFile,
+    duration: Number($('durationSlider').value),
+    mode: $('modeSelect').value,
+    res: $('resSelect').value,
+  };
+  const job = client.submit(endpoint, buildPayload(sdk, params, inp));
+  for await (const msg of job) {
+    if (msg.type === 'status') {
+      if (msg.stage === 'error') throw new Error(msg.message || 'The Space returned an error.');
+      if (msg.stage === 'pending') {
+        const pos = typeof msg.position === 'number' ? ' — position ' + (msg.position + 1) : '';
+        const eta = msg.eta ? ' (≈' + Math.round(msg.eta) + 's)' : '';
+        jobLog('Waiting in the GPU queue' + pos + eta + '…');
+        jobProgress(8);
+      } else if (msg.stage === 'generating') {
+        const pd = msg.progress_data && msg.progress_data[0];
+        if (pd && pd.length) {
+          jobLog((pd.desc ? pd.desc + ': ' : 'Generating: ') + pd.index + ' / ' + pd.length + (pd.unit ? ' ' + pd.unit : ''));
+          jobProgress(10 + (pd.index / pd.length) * 88);
+        } else if (pd && typeof pd.progress === 'number') {
+          jobLog((pd.desc || 'Generating') + '…');
+          jobProgress(10 + pd.progress * 88);
+        } else {
+          jobLog('Running on the GPU…');
+        }
+      }
+    } else if (msg.type === 'log' && msg.log) {
+      jobLog('Space says: ' + msg.log, msg.level === 'error');
+    } else if (msg.type === 'data') {
+      const url = extractVideoUrl(msg.data);
+      if (!url) throw new Error('The Space finished but returned no video. Check the photo shows one clear person.');
+      jobProgress(100);
+      return url;
+    }
+  }
+  throw new Error('The connection closed before a result arrived. Please try again.');
+}
+
+async function tryFetchBlob(url) {
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const b = await r.blob();
+    return b.size ? b : null;
+  } catch { return null; }
+}
+
+async function executePipeline() {
+  jobLog('Connecting to ' + getSpace() + '…');
+  const { sdk, client } = await connectClient((s) => {
+    if (s && s.status && s.status !== 'running') jobLog('Space is ' + s.status + (s.message ? ': ' + s.message : '') + ' — waiting…');
+  });
+  let api = null;
+  try { api = await client.view_api(); } catch {}
+  const endpoint = pickEndpoint(api);
+  const params = api && api.named_endpoints && api.named_endpoints[endpoint] ? api.named_endpoints[endpoint].parameters : [];
+
+  let url = await runPass(sdk, client, endpoint, params, drivingFile, char1File,
+    char2File ? 'Pass 1 of 2 · Character 1' : 'Generating · Character 1');
+  let blob = await tryFetchBlob(url);
+
+  if (char2File) {
+    jobLog('Pass 1 done. Feeding it into pass 2…');
+    const nextInput = blob ? new File([blob], 'pass1.mp4', { type: 'video/mp4' }) : url;
+    url = await runPass(sdk, client, endpoint, params, nextInput, char2File, 'Pass 2 of 2 · Character 2');
+    blob = await tryFetchBlob(url);
+  }
+
+  lastOutputBlob = blob;
+  const out = $('outputVideo');
+  out.src = blob ? URL.createObjectURL(blob) : url;
+  $('openOutLink').href = url;
+  $('saveOutBtn').disabled = !blob;
+  $('shareOutBtn').disabled = !blob;
+  $('outputVideoWrap').classList.remove('hidden');
+  $('jobTitle').textContent = '✅ Done';
+  jobLog(blob ? 'Rendered free on Hugging Face ZeroGPU.' : 'Done. Use “Open result in a new tab” to save it (direct download was blocked).');
+}
+
+$('saveOutBtn').onclick = () => lastOutputBlob && saveBlob(lastOutputBlob, 'genjutsu_swap.mp4');
+$('shareOutBtn').onclick = () => lastOutputBlob && shareOrSave(lastOutputBlob, 'genjutsu_swap.mp4');
+
+$('runSwapBtn').onclick = async () => {
+  if (busy) return;
+  $('jobStatusCard').classList.remove('hidden');
+  if (!drivingFile) { $('jobTitle').textContent = 'Missing video'; jobLog('Load a driving video in step 1 first.', true); return; }
+  if (!char1File) { $('jobTitle').textContent = 'Missing photo'; jobLog('Choose a Character 1 photo in step 2 first.', true); return; }
+  busy = true;
+  $('runSwapBtn').disabled = true;
+  $('outputVideoWrap').classList.add('hidden');
+  jobProgress(0);
+  const t0 = Date.now();
+  const timer = setInterval(() => { $('jobTimer').textContent = Math.round((Date.now() - t0) / 1000) + 's'; }, 1000);
+  try {
+    await executePipeline();
+  } catch (e) {
+    $('jobTitle').textContent = '⚠️ Error';
+    jobLog(friendlyError(e && e.message ? e.message : e), true);
+  } finally {
+    clearInterval(timer);
+    busy = false;
+    $('runSwapBtn').disabled = false;
+  }
+};
+// ---------- open with …/#src=<m3u8 url> to auto-load a stream ----------
+(function autoLoadFromHash() {
+  const m = location.hash.match(/^#src=(.+)$/);
+  if (!m) return;
+  let src;
+  try { src = decodeURIComponent(m[1]); } catch { return; }
+  history.replaceState(null, '', location.pathname + location.search);
+  if (!/^https?:\/\/[^\s]+\.m3u8/i.test(src)) return;
+  $('m3u8UrlInput').value = src;
+  $('fetchM3u8Btn').click();
+})();
+</script>
+</body>
+</html>
